@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeArena - 题目中心</title>
+    <style>
+        :root { color-scheme: light; }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: "Microsoft YaHei", Arial, sans-serif; background: #f4f7fb; color: #1f2937; }
+        .topbar { min-height: 64px; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; color: white; background: #172554; }
+        .brand { font-size: 22px; font-weight: 700; letter-spacing: .2px; }
+        .user-actions { display: flex; align-items: center; gap: 16px; font-size: 14px; }
+        .logout { border: 1px solid #93c5fd; border-radius: 6px; padding: 7px 12px; color: white; background: transparent; cursor: pointer; }
+        .logout:hover { background: #1e3a8a; }
+        .container { max-width: 1180px; margin: 32px auto; padding: 0 24px; }
+        .page-title { margin: 0 0 8px; font-size: 28px; }
+        .page-subtitle { margin: 0 0 26px; color: #64748b; }
+        .layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); gap: 24px; align-items: start; }
+        .panel { overflow: hidden; border-radius: 12px; background: #fff; box-shadow: 0 4px 18px rgba(15, 23, 42, .08); }
+        .panel-header { padding: 20px 24px; border-bottom: 1px solid #e5e7eb; font-size: 18px; font-weight: 700; }
+        .loading, .empty, .error { padding: 28px 24px; color: #64748b; text-align: center; }
+        .error { color: #b91c1c; }
+        .problem { display: block; padding: 20px 24px; border-bottom: 1px solid #edf0f5; color: inherit; text-decoration: none; transition: background .15s ease; }
+        .problem:last-child { border-bottom: 0; }
+        .problem:hover { background: #f8fbff; }
+        .problem-title { margin: 0 0 9px; color: #1d4ed8; font-size: 17px; }
+        .problem-description { display: -webkit-box; overflow: hidden; margin: 0; color: #64748b; line-height: 1.55; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+        .tag { display: inline-block; margin-top: 12px; padding: 3px 9px; border-radius: 99px; background: #eff6ff; color: #1d4ed8; font-size: 13px; }
+        .submission {
+            display: block;
+            padding: 15px 18px;
+            border-bottom: 1px solid #edf0f5;
+            color: inherit;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .submission:hover {
+            background: #f8fbff;
+        }
+        .submission:last-child { border-bottom: 0; }
+        .submission-title { overflow: hidden; color: #334155; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+        .submission-meta { margin-top: 7px; color: #94a3b8; font-size: 12px; }
+        .status { color: #a16207; }
+        .status.ac { color: #15803d; font-weight: 600; }
+        .status.fail { color: #b91c1c; font-weight: 600; }
+        @media (max-width: 820px) { .topbar { padding: 0 20px; } .container { margin-top: 24px; padding: 0 16px; } .layout { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">CodeArena</div>
+    <div class="user-actions">
+        <span id="currentUser">正在验证登录状态…</span>
+        <button class="logout" type="button" onclick="logout()">退出登录</button>
+    </div>
+</header>
+
+<main class="container">
+    <h1 class="page-title">题目中心</h1>
+    <p class="page-subtitle">选择题目查看详情并提交你的解答。</p>
+    <div class="layout">
+        <section class="panel">
+            <div class="panel-header">题目列表</div>
+            <div id="problemList" class="loading">正在从服务器加载题目…</div>
+        </section>
+        <aside class="panel">
+            <div class="panel-header">我的最近提交</div>
+            <div id="submissionList" class="loading">正在加载提交记录…</div>
+        </aside>
+    </div>
+</main>
+
+<script>
+    const token = localStorage.getItem("token");
+
+    function authHeaders() {
+        return { "Authorization": "Bearer " + token };
+    }
+
+    function logout() {
+        localStorage.removeItem("token");
+        window.location.replace("/login.html");
+    }
+
+    function redirectToLogin() {
+        logout();
+    }
+
+    async function readJson(response) {
+        try {
+            return await response.json();
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function formatDate(value) {
+        if (!value) return "时间未知";
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? value.replace("T", " ") : date.toLocaleString("zh-CN", { hour12: false });
+    }
+
+    // 判题状态 -> 中文说明
+    const JUDGE_STATUS_TEXT = {
+        AC: "通过 AC",
+        WA: "答案错误 WA",
+        TLE: "运行超时 TLE",
+        RE: "运行错误 RE",
+        CE: "编译错误 CE",
+        SE: "系统错误 SE",
+        SUBMITTED: "已提交，待判题"
+        ,PENDING: "待判题",
+        RUNNING: "判题中",
+        ACCEPTED: "通过 AC",
+        WRONG_ANSWER: "答案错误 WA",
+        COMPILE_ERROR: "编译错误 CE",
+        RUNTIME_ERROR: "运行错误 RE",
+        TIME_LIMIT_EXCEEDED: "运行超时 TLE"
+    };
+
+    function statusText(status) {
+        return JUDGE_STATUS_TEXT[status] || (status || "未知状态");
+    }
+
+    function statusClass(status) {
+        if (status === "AC" || status === "ACCEPTED") {
+            return "status ac";
+        }
+        if (["SUBMITTED", "PENDING", "RUNNING"].includes(status)) {
+            return "status";
+        }
+        return "status fail";
+    }
+
+    async function verifyLogin() {
+        if (!token) {
+            redirectToLogin();
+            return false;
+        }
+        try {
+            const response = await fetch("/user/info", { headers: authHeaders() });
+            const result = await readJson(response);
+            if (!response.ok || !result || result.code !== 200) {
+                redirectToLogin();
+                return false;
+            }
+            document.getElementById("currentUser").textContent = "你好，" + result.data;
+            return true;
+        } catch (error) {
+            document.getElementById("currentUser").textContent = "登录状态验证失败";
+            return false;
+        }
+    }
+
+    async function loadProblems() {
+        const list = document.getElementById("problemList");
+        try {
+            const response = await fetch("/problem/list", { headers: authHeaders() });
+            const result = await readJson(response);
+            if (!response.ok || !result || result.code !== 200) {
+                throw new Error((result && result.message) || "题目加载失败");
+            }
+            const problems = result.data || [];
+            list.replaceChildren();
+            if (problems.length === 0) {
+                list.className = "empty";
+                list.textContent = "暂时还没有题目。";
+                return;
+            }
+            list.className = "";
+            problems.forEach(problem => {
+                const link = document.createElement("a");
+                link.className = "problem";
+                link.href = "/problem.html?id=" + encodeURIComponent(problem.id);
+
+                const title = document.createElement("h2");
+                title.className = "problem-title";
+                title.textContent = problem.id + ". " + problem.title;
+                const description = document.createElement("p");
+                description.className = "problem-description";
+                description.textContent = problem.description || "暂无题目描述";
+                const difficulty = document.createElement("span");
+                difficulty.className = "tag";
+                difficulty.textContent = "难度：" + (problem.difficulty || "未标注");
+
+                link.append(title, description, difficulty);
+                list.appendChild(link);
+            });
+        } catch (error) {
+            list.className = "error";
+            list.textContent = error.message || "题目加载失败，请刷新重试。";
+        }
+    }
+
+    async function loadSubmissions() {
+        const list = document.getElementById("submissionList");
+        try {
+            const response = await fetch("/submission/mine", { headers: authHeaders() });
+            if (response.status === 401) {
+                redirectToLogin();
+                return;
+            }
+            const result = await readJson(response);
+            if (!response.ok || !result || result.code !== 200) {
+                throw new Error((result && result.message) || "提交记录加载失败");
+            }
+            const submissions = result.data || [];
+            list.replaceChildren();
+            if (submissions.length === 0) {
+                list.className = "empty";
+                list.textContent = "你还没有提交记录。";
+                return;
+            }
+            list.className = "";
+            submissions.slice(0, 8).forEach(submission => {
+                const item = document.createElement("a");
+                item.className = "submission";
+                item.href = "/submission.html?id=" + encodeURIComponent(submission.id);
+
+                const title = document.createElement("div");
+                title.className = "submission-title";
+                title.textContent =
+                    submission.problemTitle || ("题目 #" + submission.problemId);
+
+                const meta = document.createElement("div");
+                meta.className = "submission-meta";
+
+                const state = document.createElement("span");
+                state.className = statusClass(submission.status);
+                state.textContent = statusText(submission.status);
+
+                meta.append(
+                    document.createTextNode("#" + submission.id + " · "),
+                    state,
+                    document.createTextNode(
+                        " · " +
+                        (submission.language || "未标注") +
+                        " · " +
+                        formatDate(submission.createdAt)
+                    )
+                );
+
+                item.append(title, meta);
+                list.appendChild(item);
+            });
+        } catch (error) {
+            list.className = "error";
+            list.textContent = error.message || "提交记录加载失败，请刷新重试。";
+        }
+    }
+
+    (async function initialize() {
+        if (await verifyLogin()) {
+            await Promise.all([loadProblems(), loadSubmissions()]);
+        }
+    })();
+</script>
+</body>
+</html>

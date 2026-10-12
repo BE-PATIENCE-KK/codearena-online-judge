@@ -1,0 +1,12 @@
+### 用户注册
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "demo-user",
+  "password": "<set-locally-before-sending>",
+  "email": "demo@example.invalid"
+
+}
+### 获取所有题目
+GET http://localhost:8080/problem/list

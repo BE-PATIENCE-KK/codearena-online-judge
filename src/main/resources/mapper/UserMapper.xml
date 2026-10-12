@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.codearena.codearena.mapper.UserMapper">
+
+    <select id="findByUsername"
+            parameterType="string"
+            resultType="com.codearena.codearena.entity.User">
+
+        SELECT *
+        FROM user
+        WHERE username = #{username}
+        LIMIT 1
+
+    </select>
+
+    <insert id="insertUser"
+            parameterType="com.codearena.codearena.entity.User">
+
+        INSERT INTO user
+        (username, password, email, role, status)
+        VALUES
+        (#{username}, #{password}, #{email}, #{role}, #{status})
+
+    </insert>
+
+    <update id="updatePasswordHashIfUnchanged">
+        UPDATE user
+        SET password = #{passwordHash}, update_time = CURRENT_TIMESTAMP
+        WHERE id = #{userId} AND password = #{expectedPassword}
+    </update>
+
+</mapper>

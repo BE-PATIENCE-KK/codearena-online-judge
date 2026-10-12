@@ -1,0 +1,77 @@
+# Maven / build output
+target/
+build/
+out/
+*.class
+
+# Logs and runtime files
+*.log
+logs/
+*.pid
+
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
+application-local.yml
+application-local.yaml
+application-local.properties
+application-local.*
+application-secrets.*
+application-secret.*
+application-*.local.yml
+application-*.local.yaml
+application-*.local.properties
+
+# Private keys and local certificates
+*.pem
+*.key
+*.p12
+*.jks
+
+# Local database files (keep SQL schema and seed scripts tracked)
+*.db
+*.sqlite
+*.sqlite3
+*.mv.db
+*.h2.db
+*.db-wal
+*.db-shm
+*.sqlite-wal
+*.sqlite-shm
+*.dump
+*.bak
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Eclipse / Spring Tool Suite
+.classpath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+.apt_generated/
+.factorypath
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# Visual Studio Code and Fleet
+.vscode/
+.fleet/
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Maven Wrapper binary is downloaded automatically by the wrapper scripts
+.mvn/wrapper/maven-wrapper.jar

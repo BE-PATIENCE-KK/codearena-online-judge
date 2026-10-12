@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeArena - 提交详情</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            background: #f4f7fb;
+            color: #1f2937;
+        }
+
+        .topbar {
+            min-height: 64px;
+            padding: 0 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: white;
+            background: #172554;
+        }
+
+        .brand {
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .back {
+            color: white;
+            text-decoration: none;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 32px auto;
+            padding: 0 24px;
+        }
+
+        .panel {
+            overflow: hidden;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 4px 18px rgba(15, 23, 42, .08);
+        }
+
+        .header {
+            padding: 24px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .title {
+            margin: 0 0 10px;
+            font-size: 26px;
+        }
+
+        .meta {
+            color: #64748b;
+            line-height: 1.8;
+        }
+
+        .code-title {
+            padding: 18px 24px;
+            font-size: 18px;
+            font-weight: 700;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        pre {
+            margin: 0;
+            padding: 24px;
+            overflow-x: auto;
+            background: #0f172a;
+            color: #e2e8f0;
+            line-height: 1.6;
+            font-family: Consolas, monospace;
+        }
+
+        .error {
+            padding: 30px;
+            color: #b91c1c;
+            text-align: center;
+        }
+
+        .status-ac { color: #15803d; font-weight: 700; }
+        .status-fail { color: #b91c1c; font-weight: 700; }
+        .status-wait { color: #a16207; font-weight: 700; }
+        .judge-message pre { background: #1f2937; color: #fecaca; }
+    </style>
+</head>
+
+<body>
+
+<header class="topbar">
+    <div class="brand">CodeArena</div>
+    <a class="back" href="/problem-list.html">返回题目中心</a>
+</header>
+
+<main class="container">
+
+    <div id="content" class="panel">
+        正在加载提交详情...
+    </div>
+
+</main>
+
+<script>
+
+    const token = localStorage.getItem("token");
+
+    function authHeaders() {
+        return {
+            "Authorization": "Bearer " + token
+        };
+    }
+
+    function formatDate(value) {
+        if (!value) {
+            return "时间未知";
+        }
+
+        const date = new Date(value);
+
+        if (Number.isNaN(date.getTime())) {
+            return value.replace("T", " ");
+        }
+
+        return date.toLocaleString("zh-CN", {
+            hour12: false
+        });
+    }
+
+    // 判题状态 -> 中文说明
+    const JUDGE_STATUS_TEXT = {
+        AC: "AC 通过 (Accepted)",
+        WA: "WA 答案错误 (Wrong Answer)",
+        TLE: "TLE 运行超时 (Time Limit Exceeded)",
+        RE: "RE 运行错误 (Runtime Error)",
+        CE: "CE 编译错误 (Compile Error)",
+        SE: "SE 系统错误 (System Error)",
+        SUBMITTED: "已提交，等待判题"
+    };
+
+    function statusText(status) {
+        return JUDGE_STATUS_TEXT[status] || (status || "未知状态");
+    }
+
+    function statusClass(status) {
+        if (status === "AC") {
+            return "status-ac";
+        }
+        if (status === "SUBMITTED") {
+            return "status-wait";
+        }
+        return "status-fail";
+    }
+
+    async function loadSubmission() {
+        const content = document.getElementById("content");
+
+        if (!token) {
+            window.location.replace("/login.html");
+            return;
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get("id");
+
+        if (!id) {
+            content.innerHTML =
+                '<div class="error">缺少提交编号</div>';
+            return;
+        }
+
+        try {
+
+            const response = await fetch(
+                "/submission/" + encodeURIComponent(id),
+                {
+                    headers: authHeaders()
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok || !result || result.code !== 200) {
+                throw new Error(
+                    (result && result.message)
+                    || "提交记录加载失败"
+                );
+            }
+
+            const submission = result.data;
+
+            content.innerHTML = `
+                <div class="header">
+                    <h1 class="title">
+                        ${submission.problemTitle || "提交详情"}
+                    </h1>
+
+                    <div class="meta">
+                        提交编号：${submission.id}<br>
+                        编程语言：${submission.language || "未标注"}<br>
+                        判题结果：<span class="${statusClass(submission.status)}">${statusText(submission.status)}</span><br>
+                        判题耗时：${typeof submission.timeUsed === "number" ? submission.timeUsed + " ms" : "—"}<br>
+                        提交时间：${formatDate(submission.createdAt)}
+                    </div>
+                </div>
+
+                <div class="code-title">
+                    提交代码
+                </div>
+
+                <pre></pre>
+            `;
+
+            content.querySelector("pre").textContent =
+                submission.answer || "没有提交代码";
+
+            // 编译错误 / 运行错误 / 错在哪里的提示信息
+            if (submission.errorMessage) {
+                const box = document.createElement("div");
+                box.className = "judge-message";
+
+                const title = document.createElement("div");
+                title.className = "code-title";
+                title.textContent = "判题信息";
+
+                const detail = document.createElement("pre");
+                detail.textContent = submission.errorMessage;
+
+                box.append(title, detail);
+                content.appendChild(box);
+            }
+
+        } catch (error) {
+
+            const errorBox = document.createElement("div");
+            errorBox.className = "error";
+            errorBox.textContent = error.message || "提交记录加载失败";
+            content.replaceChildren(errorBox);
+        }
+    }
+
+    loadSubmission();
+
+</script>
+
+</body>
+</html>
+
+</body>
+</html>

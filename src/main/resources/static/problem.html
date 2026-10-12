@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeArena - 题目详情</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 32px 18px; background: #f4f7fb; color: #1f2937; font-family: "Microsoft YaHei", Arial, sans-serif; }
+        .container { max-width: 960px; margin: 0 auto; }
+        .card { padding: 30px; border-radius: 12px; background: #fff; box-shadow: 0 4px 18px rgba(15, 23, 42, .08); }
+        .back { display: inline-block; margin-bottom: 22px; color: #2563eb; cursor: pointer; text-decoration: none; }
+        h1 { margin: 0 0 12px; font-size: 28px; }
+        h2 { margin: 30px 0 12px; padding-left: 10px; border-left: 4px solid #2563eb; font-size: 18px; }
+        .difficulty { display: inline-block; padding: 4px 10px; border-radius: 99px; background: #eff6ff; color: #1d4ed8; font-size: 14px; }
+        .content { line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+        pre { overflow-x: auto; margin: 0; padding: 15px; border-radius: 7px; background: #f1f5f9; white-space: pre-wrap; word-break: break-word; }
+        .limits { display: flex; gap: 24px; color: #64748b; }
+        .submit-card { margin-top: 24px; padding: 26px 30px; border-radius: 12px; background: #fff; box-shadow: 0 4px 18px rgba(15, 23, 42, .08); }
+        .form-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        label { font-weight: 600; }
+        select, textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 7px; font: inherit; }
+        select { width: 160px; padding: 8px; }
+        textarea { min-height: 240px; padding: 13px; resize: vertical; font-family: Consolas, "Courier New", monospace; line-height: 1.5; }
+        button { margin-top: 14px; padding: 10px 18px; border: 0; border-radius: 7px; color: white; background: #2563eb; font: inherit; font-weight: 600; cursor: pointer; }
+        button:hover { background: #1d4ed8; }
+        button:disabled { background: #93c5fd; cursor: not-allowed; }
+        .message { min-height: 24px; margin: 12px 0 0; line-height: 1.5; }
+        .message.error { color: #b91c1c; }
+        .message.success { color: #15803d; }
+        .judge-result { margin-top: 16px; padding: 16px 18px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; }
+        .judge-result.ac { border-color: #86efac; background: #f0fdf4; }
+        .judge-result.fail { border-color: #fecaca; background: #fef2f2; }
+        .judge-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+        .judge-status { font-size: 17px; font-weight: 700; color: #334155; }
+        .judge-result.ac .judge-status { color: #15803d; }
+        .judge-result.fail .judge-status { color: #b91c1c; }
+        .judge-time { color: #64748b; font-size: 13px; }
+        .judge-detail { margin-top: 12px; padding: 12px; max-height: 240px; overflow: auto; background: #0f172a; color: #e2e8f0; font-size: 13px; }
+        .lang-tip { color: #64748b; font-size: 13px; }
+        .load-error { color: #b91c1c; }
+        .hidden { display: none; }
+        @media (max-width: 600px) { .card, .submit-card { padding: 22px; } .limits { display: block; } .limits p { margin: 8px 0; } }
+    </style>
+</head>
+<body>
+<main class="container">
+    <section class="card">
+        <a class="back" href="/problem-list.html">← 返回题目列表</a>
+        <h1 id="title">正在加载题目…</h1>
+        <span class="difficulty">难度：<span id="difficulty">-</span></span>
+        <div id="problemContent">
+            <h2>题目描述</h2>
+            <p id="description" class="content"></p>
+            <h2>输入说明</h2>
+            <p id="inputDescription" class="content"></p>
+            <h2>输出说明</h2>
+            <p id="outputDescription" class="content"></p>
+            <h2>示例输入</h2>
+            <pre id="sampleInput"></pre>
+            <h2>示例输出</h2>
+            <pre id="sampleOutput"></pre>
+            <h2>限制</h2>
+            <div class="limits">
+                <p>时间限制：<span id="timeLimit">-</span> ms</p>
+                <p>内存限制：<span id="memoryLimit">-</span> MB</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="submitCard" class="submit-card hidden">
+        <h2>提交解答</h2>
+        <p class="content">提交后系统会立即用 javac 编译、用 java 运行你的代码，再和样例输出比较，直接给出判题结果（AC / WA / RE / TLE / CE）。</p>
+        <div class="form-row">
+            <label for="language">语言</label>
+            <select id="language">
+                <option value="Java">Java</option>
+            </select>
+            <span class="lang-tip">当前版本判题器支持 Java。</span>
+        </div>
+        <label for="answer">代码 / 解答内容</label>
+        <textarea id="answer" maxlength="16000" placeholder="在这里输入你的解答…（Java 需要包含 public class Main 和 main 方法）" aria-label="代码或解答内容"></textarea>
+        <button id="submitButton" type="button" onclick="submitAnswer()">提交解答</button>
+        <p id="submitMessage" class="message" role="status"></p>
+        <div id="judgeResult" class="judge-result hidden">
+            <div class="judge-head">
+                <span id="judgeStatus" class="judge-status">等待提交</span>
+                <span id="judgeTime" class="judge-time"></span>
+            </div>
+            <pre id="judgeDetail" class="judge-detail hidden"></pre>
+        </div>
+    </section>
+</main>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+    const problemId = params.get("id");
+    const token = localStorage.getItem("token");
+    let currentProblem = null;
+
+    function authHeaders() {
+        return { "Authorization": "Bearer " + token };
+    }
+
+    function logout() {
+        localStorage.removeItem("token");
+        window.location.replace("/login.html");
+    }
+
+    async function readJson(response) {
+        try {
+            return await response.json();
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function setLoadError(message) {
+        document.getElementById("title").textContent = message;
+        document.getElementById("title").className = "load-error";
+        document.getElementById("problemContent").classList.add("hidden");
+    }
+
+    function setSubmitMessage(message, type) {
+        const element = document.getElementById("submitMessage");
+        element.textContent = message;
+        element.className = "message " + (type || "");
+    }
+
+    // 判题状态 -> 中文说明
+    const JUDGE_STATUS_TEXT = {
+        AC: "AC 通过 (Accepted)",
+        WA: "WA 答案错误 (Wrong Answer)",
+        TLE: "TLE 运行超时 (Time Limit Exceeded)",
+        RE: "RE 运行错误 (Runtime Error)",
+        CE: "CE 编译错误 (Compile Error)",
+        SE: "SE 系统错误 (System Error)",
+        SUBMITTED: "已提交，等待判题"
+        ,PENDING: "待判题",
+        RUNNING: "判题中",
+        ACCEPTED: "通过 (Accepted)",
+        WRONG_ANSWER: "答案错误 (Wrong Answer)",
+        COMPILE_ERROR: "编译错误 (Compile Error)",
+        RUNTIME_ERROR: "运行错误 (Runtime Error)",
+        TIME_LIMIT_EXCEEDED: "运行超时 (Time Limit Exceeded)"
+    };
+
+    function renderJudgeResult(submission) {
+        const status = submission.status || "SUBMITTED";
+        const box = document.getElementById("judgeResult");
+        const statusElement = document.getElementById("judgeStatus");
+        const timeElement = document.getElementById("judgeTime");
+        const detailElement = document.getElementById("judgeDetail");
+
+        statusElement.textContent = JUDGE_STATUS_TEXT[status] || status;
+        timeElement.textContent = (typeof submission.timeUsed === "number")
+            ? "判题耗时 " + submission.timeUsed + " ms"
+            : "";
+        if (submission.createdAt) {
+            timeElement.textContent += (timeElement.textContent ? " · " : "")
+                + "提交时间 " + new Date(submission.createdAt).toLocaleString("zh-CN", { hour12: false });
+        }
+
+        box.classList.remove("hidden", "ac", "fail");
+        if (status === "AC") {
+            box.classList.add("ac");
+        } else if (status !== "SUBMITTED" && status !== "PENDING" && status !== "RUNNING") {
+            box.classList.add("fail");
+        }
+
+        if (submission.errorMessage) {
+            detailElement.textContent = submission.errorMessage;
+            detailElement.classList.remove("hidden");
+        } else {
+            detailElement.textContent = "";
+            detailElement.classList.add("hidden");
+        }
+    }
+
+    async function verifyLogin() {
+        if (!token) {
+            logout();
+            return false;
+        }
+        try {
+            const response = await fetch("/user/info", { headers: authHeaders() });
+            if (response.status === 401) {
+                logout();
+                return false;
+            }
+            if (!response.ok) {
+                setLoadError("登录状态验证失败，请返回登录页重试");
+                return false;
+            }
+            return true;
+        } catch (error) {
+            setLoadError("登录状态验证失败，请返回登录页重试");
+            return false;
+        }
+    }
+
+    async function loadProblem() {
+        if (!problemId || !/^\d+$/.test(problemId) || Number(problemId) <= 0) {
+            setLoadError("题目编号不合法");
+            return;
+        }
+        try {
+            const response = await fetch("/problem/" + encodeURIComponent(problemId), { headers: authHeaders() });
+            const result = await readJson(response);
+            if (!response.ok || !result || result.code !== 200 || !result.data) {
+                throw new Error((result && result.message) || "题目加载失败");
+            }
+            currentProblem = result.data;
+            document.title = "CodeArena - " + currentProblem.title;
+            document.getElementById("title").textContent = currentProblem.title;
+            document.getElementById("difficulty").textContent = currentProblem.difficulty || "未标注";
+            document.getElementById("description").textContent = currentProblem.description || "暂无题目描述";
+            document.getElementById("inputDescription").textContent = currentProblem.inputDescription || "暂无";
+            document.getElementById("outputDescription").textContent = currentProblem.outputDescription || "暂无";
+            document.getElementById("sampleInput").textContent = currentProblem.sampleInput || "暂无";
+            document.getElementById("sampleOutput").textContent = currentProblem.sampleOutput || "暂无";
+            document.getElementById("timeLimit").textContent = currentProblem.timeLimit || "-";
+            document.getElementById("memoryLimit").textContent = currentProblem.memoryLimit || "-";
+            document.getElementById("submitCard").classList.remove("hidden");
+        } catch (error) {
+            setLoadError(error.message || "题目加载失败，请刷新重试");
+        }
+    }
+
+    async function submitAnswer() {
+        const answer = document.getElementById("answer").value.trim();
+        const language = document.getElementById("language").value;
+        const button = document.getElementById("submitButton");
+        if (!currentProblem) {
+            setSubmitMessage("题目尚未加载完成，无法提交。", "error");
+            return;
+        }
+        if (!answer) {
+            setSubmitMessage("请输入代码或解答内容后再提交。", "error");
+            return;
+        }
+        button.disabled = true;
+        setSubmitMessage("正在提交，判题中…");
+        document.getElementById("judgeResult").classList.add("hidden");
+        try {
+            const response = await fetch("/submission", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", ...authHeaders() },
+                body: JSON.stringify({ problemId: currentProblem.id, answer, language })
+            });
+            if (response.status === 401) {
+                logout();
+                return;
+            }
+            const result = await readJson(response);
+            if (!response.ok || !result || result.code !== 200) {
+                throw new Error((result && result.message) || "提交失败");
+            }
+            document.getElementById("answer").value = "";
+            renderJudgeResult(result.data);
+            const status = result.data.status || "SUBMITTED";
+            setSubmitMessage(
+                "提交成功（#" + result.data.id + "）：" + (JUDGE_STATUS_TEXT[status] || status),
+                status === "AC" ? "success" : "error"
+            );
+        } catch (error) {
+            setSubmitMessage(error.message || "提交失败，请稍后重试。", "error");
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    (async function initialize() {
+        if (await verifyLogin()) {
+            await loadProblem();
+        }
+    })();
+</script>
+</body>
+</html>

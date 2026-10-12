@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>CodeArena - 注册</title>
+    <style>
+        .error { color: #b91c1c; }
+        .success { color: #15803d; }
+    </style>
+</head>
+
+<body>
+
+<h1>CodeArena</h1>
+
+<p>创建你的 CodeArena 账号</p>
+
+<input id="username" type="text" placeholder="用户名">
+
+<br><br>
+
+<input id="password" type="password" placeholder="密码">
+
+<br><br>
+
+<input id="email" type="email" placeholder="邮箱">
+
+<br><br>
+
+<button id="registerButton" type="button" onclick="register()">注册</button>
+
+<p id="message"></p>
+
+<p>
+    已经有账号？
+    <a href="/login.html">返回登录</a>
+</p>
+
+<script>
+
+    // 与 login.html 保持一致：使用相对路径，避免硬编码 localhost:8080。
+    const REGISTER_API = "/api/auth/register";
+
+    function setMessage(text, type) {
+        const element = document.getElementById("message");
+        element.textContent = text;
+        element.className = type || "";
+    }
+
+    // /api/auth/register 失败时返回纯文本（如“用户名已存在”），
+    // 参数错误走全局异常处理时返回 Result JSON（{code,message,data}）。
+    function describeBody(body) {
+        if (!body) {
+            return "";
+        }
+        try {
+            const json = JSON.parse(body);
+            if (json && typeof json.message === "string") {
+                return json.message;
+            }
+        } catch (error) {
+            // 不是 JSON，按纯文本处理
+        }
+        if (body.startsWith("<")) {
+            return "服务端返回的是 HTML 页面，不是注册接口的结果";
+        }
+        return body.replace(/\s+/g, " ").trim().slice(0, 200);
+    }
+
+    async function register() {
+
+        const username =
+            document.getElementById("username").value.trim();
+
+        const password =
+            document.getElementById("password").value;
+
+        const email =
+            document.getElementById("email").value.trim();
+
+        if (!username || !password || !email) {
+            setMessage("请填写完整信息", "error");
+            return;
+        }
+
+        // 直接双击打开 HTML 文件时协议是 file:，相对路径无法访问后端接口。
+        if (window.location.protocol === "file:") {
+            setMessage("当前页面是以文件方式打开的，无法访问后端接口。请通过 Spring Boot 打开：http://localhost:8080/register.html", "error");
+            return;
+        }
+
+        const button = document.getElementById("registerButton");
+        button.disabled = true;
+        setMessage("正在注册…");
+
+        try {
+
+            const response = await fetch(REGISTER_API, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password,
+                    email: email
+                })
+            });
+
+            const body = (await response.text()).trim();
+            const detail = describeBody(body);
+
+            if (response.status === 404) {
+                setMessage("请求接口不存在（HTTP 404）：" + REGISTER_API + "。当前页面来源是 " + window.location.origin + "，请通过 Spring Boot 打开 http://localhost:8080/register.html。", "error");
+                return;
+            }
+
+            if (response.status === 401) {
+                setMessage("服务器返回 401（未授权）：注册接口本身不需要 JWT，请检查 JWT 拦截器白名单是否包含 /api/auth/register。", "error");
+                return;
+            }
+
+            if (response.status === 400) {
+                setMessage("请求参数不合法（HTTP 400）" + (detail ? "：" + detail : ""), "error");
+                return;
+            }
+
+            if (response.status >= 500) {
+                setMessage("服务器内部错误（HTTP " + response.status + "）" + (detail ? "：" + detail : "") + "，请查看 IDEA 控制台日志。", "error");
+                return;
+            }
+
+            if (!response.ok) {
+                setMessage("注册失败（HTTP " + response.status + "）" + (detail ? "：" + detail : ""), "error");
+                return;
+            }
+
+            // 后端成功时返回“注册成功”，失败时返回“用户名已存在”“注册失败”
+            if (body.includes("用户名已存在")) {
+                setMessage("用户名已存在，请更换用户名或直接登录", "error");
+                return;
+            }
+
+            if (!body) {
+                setMessage("返回数据格式异常：服务端返回了空内容，请查看后端日志。", "error");
+                return;
+            }
+
+            if (body.includes("成功")) {
+                setMessage("注册成功，1 秒后返回登录页…", "success");
+                setTimeout(() => {
+                    window.location.href = "/login.html";
+                }, 1000);
+                return;
+            }
+
+            if (body.includes("注册失败")) {
+                setMessage("注册失败：服务端未能保存用户，请查看 IDEA 控制台日志。", "error");
+                return;
+            }
+
+            setMessage("返回数据格式异常：无法识别的返回内容（" + detail + "），请确认接口地址与后端返回格式。", "error");
+
+        } catch (error) {
+
+            // fetch 只有在网络层失败时才抛出异常：后端未启动、端口不通、连接被拒绝等
+            console.error(error);
+            setMessage("无法连接到服务器，请确认 Spring Boot 已启动（http://localhost:8080）。", "error");
+
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+</script>
+
+</body>
+
+</html>
